@@ -48,7 +48,6 @@ esp_err_t root_handler(httpd_req_t *req)
 
 "<style>"
 "body{margin:0;font-family:Segoe UI,Arial;background:#f4f7fb;color:#1a1a1a;}"
-
 ".layout{display:grid;grid-template-columns:90px 2fr 1fr;height:100vh;}"
 
 /* SIDEBAR */
@@ -62,17 +61,14 @@ esp_err_t root_handler(httpd_req_t *req)
 ".bpm{font-size:64px;font-weight:700;color:#6c5ce7;}"
 ".status{font-size:16px;color:#555;}"
 ".advice{font-size:14px;color:#777;margin-top:5px;}"
-
 ".metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;}"
 ".metric{background:#f7f8ff;padding:12px;border-radius:12px;}"
-
 "canvas{width:100%;height:220px;background:#020617;border-radius:12px;}"
 
 /* RIGHT PANEL */
 ".right{padding:20px;background:#fff;border-left:1px solid #e6e8ee;overflow:auto;}"
 "table{width:100%;border-collapse:collapse;}"
 "th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px;text-align:left;}"
-
 ".info{font-size:14px;line-height:1.6;color:#555;}"
 "</style></head><body>"
 
@@ -80,7 +76,6 @@ esp_err_t root_handler(httpd_req_t *req)
 
 /* SIDEBAR */
 "<div class='sidebar'>"
-
 "<div class='logo'>MED</div>"
 
 "<div style='font-size:12px;color:#666;text-align:center;'>"
@@ -95,7 +90,6 @@ esp_err_t root_handler(httpd_req_t *req)
 "<div style='margin-top:auto;font-size:11px;color:#999;text-align:center;'>"
 "Live Monitoring Active"
 "</div>"
-
 "</div>"
 
 /* MAIN */
@@ -130,34 +124,57 @@ esp_err_t root_handler(httpd_req_t *req)
 
 "<div class='card'>"
 "<h3>Advanced Cardiac Metrics</h3>"
-
 "<div class='metrics'>"
 "<div class='metric'>Resting BPM<br><b>72</b></div>"
 "<div class='metric'>HRV<br><b id='hrv'>-- ms</b></div>"
 "<div class='metric'>MAP<br><b id='map'>--</b></div>"
 "<div class='metric'>Cardiac Output<br><b id='co'>-- L/min</b></div>"
 "</div>"
-
 "</div>"
 
-/* NEW: TREND GRAPH */
 "<div class='card'>"
 "<h3>Heart Rate Trend</h3>"
 "<canvas id='trend'></canvas>"
 "</div>"
 
-/* NEW: RISK PANEL */
 "<div class='card'>"
 "<h3>Risk Classification</h3>"
-"<div id='risk' style='font-size:14px;color:#555;'>Analyzing...</div>"
+"<div id='risk'>Analyzing...</div>"
 "</div>"
 
-"</div>"
+"</div>"  // CLOSE statsView
 
-/* RIGHT PANEL */
+"</div>"  // CLOSE MAIN
+
+/* RIGHT PANEL (FIXED — ONLY ONE, CORRECT POSITION) */
 "<div class='right'>"
 
-/* HISTORY TABLE */
+/* 🔴 RISK CLASSIFICATION (UPGRADED) */
+"<div class='card'>"
+"<h3>Risk Classification</h3>"
+"<div class='info' id='risk'>"
+"Risk clarification analysis for heart BPM (beats per minute) indicates that a consistently high resting heart rate (RHR), particularly above 80 to 90 bpm,is a significant independent risk factor for cardiovascular morbidity and mortality. "
+"Although the conventional normal range is 60 til 100 bpm, clinical evidence suggests that lower resting values (approximately 55 to 65 bpm) are associated with improved cardiac efficiency, better autonomic balance, and reduced long-term cardiovascular risk."
+"</div>"
+"</div>"
+
+/* 🟢 CLINICAL INTERPRETATION (UPGRADED) */
+"<div class='card'>"
+"<h3>Clinical Interpretation</h3>"
+"<div class='info' id='interpret'>"
+
+"A normal resting heart rate (RHR) for most adults ranges between 60 and 100 beats per minute (bpm), with well conditioned individuals often demonstrating values between 55 and 85 bpm. "
+
+"<br><br><b>Clinical Classification:</b><br>"
+"• Normal Range: 60 till 100 bpm<br>"
+"• Bradycardia: Below 60 bpm, commonly observed in athletes or individuals with high cardiovascular efficiency<br>"
+"• Tachycardia: Above 100 bpm, may indicate physiological stress, fever, dehydration, or underlying pathology<br><br>"
+
+"Clinical interpretation must consider patient-specific factors including age, fitness level, metabolic demand, and symptom presentation. Continuous monitoring provides better diagnostic accuracy than isolated readings."
+
+"</div>"
+"</div>"
+
 "<div class='card'>"
 "<h3>Medical Activity Log</h3>"
 "<table>"
@@ -169,13 +186,6 @@ esp_err_t root_handler(httpd_req_t *req)
 "</table>"
 "</div>"
 
-/* CLINICAL INTERPRETATION */
-"<div class='card'>"
-"<h3>Clinical Interpretation</h3>"
-"<div class='info' id='interpret'>Waiting for data...</div>"
-"</div>"
-
-/* HEART EDUCATION */
 "<div class='card'>"
 "<h3>Cardiovascular Insight</h3>"
 "<div class='info'>"
@@ -186,55 +196,43 @@ esp_err_t root_handler(httpd_req_t *req)
 "</div>"
 "</div>"
 
-"</div>"
-
-"</div>"
-
-/* SCRIPT */
 "<script>"
 
-"let currentBPM=75;"
-"let canvas=document.getElementById('ecg');"
-"let ctx=canvas.getContext('2d');"
-"canvas.width=800;canvas.height=220;"
-"let offset=0;"
-"let color='#6c5ce7';"
+/* GLOBAL STATE */
+"let currentBPM = 75;"
+"let history = [];"
+"let color = '#6c5ce7';"
 
-"let trendCanvas=document.createElement('canvas');"
-"trendCanvas=document.getElementById('trend');"
-"let tctx=trendCanvas.getContext('2d');"
-"trendCanvas.width=800; trendCanvas.height=200;"
+/* CANVAS SETUP */
+"let canvas = document.getElementById('ecg');"
+"let ctx = canvas.getContext('2d');"
+"canvas.width = 800; canvas.height = 220;"
+"let offset = 0;"
 
-"let history=[];"
-
-"function drawTrend(){"
-"tctx.fillStyle='#020617';"
-"tctx.fillRect(0,0,trendCanvas.width,trendCanvas.height);"
-
-"tctx.strokeStyle='#22c55e';"
-"tctx.beginPath();"
-
-"for(let i=0;i<history.length;i++){"
-"let x=i*10;"
-"let y=150-history[i];"
-"tctx.lineTo(x,y);"
-"}"
-
-"tctx.stroke();"
-"}"
+/* TREND GRAPH */
+"let trendCanvas = document.getElementById('trend');"
+"let tctx = trendCanvas ? trendCanvas.getContext('2d') : null;"
+"if(trendCanvas){trendCanvas.width=800;trendCanvas.height=200;}"
 
 /* VIEW SWITCH */
 "function showView(v){"
 "document.getElementById('pulseView').style.display='none';"
 "document.getElementById('statsView').style.display='none';"
-"if(v==='pulse'){document.getElementById('pulseView').style.display='block';}"
-"else{document.getElementById('statsView').style.display='block';}"
+"if(v==='pulse'){"
+"document.getElementById('pulseView').style.display='block';"
+"}else{"
+"document.getElementById('statsView').style.display='block';"
+"}"
 "}"
 
-/* ECG */
+/* ECG PQRST WAVE */
 "function drawECG(bpm){"
-"ctx.fillStyle='#020617';ctx.fillRect(0,0,canvas.width,canvas.height);"
-"ctx.strokeStyle=color;ctx.beginPath();"
+"ctx.fillStyle='#020617';"
+"ctx.fillRect(0,0,canvas.width,canvas.height);"
+
+"ctx.strokeStyle=color;"
+"ctx.lineWidth=2;"
+"ctx.beginPath();"
 
 "let base=110;"
 "let cycle=60000/bpm;"
@@ -245,28 +243,56 @@ esp_err_t root_handler(httpd_req_t *req)
 "let p=t%cycle;"
 "let y=base;"
 
+/* P */
 "if(p>80&&p<140){y-=5*Math.sin((p-80)/60*Math.PI);}"
+
+/* Q */
 "if(p>180&&p<200){y+=8;}"
+
+/* R */
 "if(p>200&&p<220){y-=35;}"
+
+/* S */
 "if(p>220&&p<240){y+=15;}"
+
+/* T */
 "if(p>300&&p<380){y-=10*Math.sin((p-300)/80*Math.PI);}"
 
-"ctx.lineTo(x,y);}"
-"ctx.stroke();offset+=5;}"
- 
-/* STATUS */
+/* draw */
+"if(x===0){ctx.moveTo(x,y);}else{ctx.lineTo(x,y);}"
+"}"
+
+"ctx.stroke();"
+"offset+=5;"
+"}"
+
+/* STATUS + CLINICAL */
 "function updateStatus(bpm){"
 "let txt='';"
-"if(bpm<60){color='#3b82f6';txt='Bradycardia detected. Recommend light activity.';}"
-"else if(bpm>100){color='#ef4444';txt='Elevated heart rate. Suggest rest and hydration.';}"
-"else{color='#22c55e';txt='Heart rate within normal resting range.';}"
+
+"if(bpm<60){"
+"color='#3b82f6';"
+"txt='Bradycardia detected. Recommend light activity.';"
+"}"
+"else if(bpm>100){"
+"color='#ef4444';"
+"txt='Elevated heart rate. Suggest rest and hydration.';"
+"}"
+"else{"
+"color='#22c55e';"
+"txt='Heart rate within normal resting range.';"
+"}"
 
 "document.getElementById('status').innerText=txt;"
 "document.getElementById('advice').innerText='Continuous monitoring active.';"
+
+/* right panel */
+"if(document.getElementById('interpret')){"
 "document.getElementById('interpret').innerText=txt;"
 "}"
+"}"
 
-/* CALC */
+/* MEDICAL CALCULATIONS */
 "function simulate(bpm){"
 "let sys=90+(bpm*0.5);"
 "let dia=60+(bpm*0.3);"
@@ -276,14 +302,43 @@ esp_err_t root_handler(httpd_req_t *req)
 "document.getElementById('stress').innerText=Math.max(0,bpm-60);"
 "document.getElementById('temp').innerText=(36.5+Math.sin(Date.now()/8000)*0.2).toFixed(1);"
 
+"if(document.getElementById('hrv')){"
 "document.getElementById('hrv').innerText=(120-bpm);"
-"document.getElementById('map').innerText=Math.round(dia+(sys-dia)/3);"
-"document.getElementById('co').innerText=(bpm*0.07).toFixed(2);"
 "}"
 
-/* FETCH */
+"if(document.getElementById('map')){"
+"document.getElementById('map').innerText=Math.round(dia+(sys-dia)/3);"
+"}"
+
+"if(document.getElementById('co')){"
+"document.getElementById('co').innerText=(bpm*0.07).toFixed(2);"
+"}"
+"}"
+
+/* TREND GRAPH */
+"function drawTrend(){"
+"if(!tctx) return;"
+
+"tctx.fillStyle='#020617';"
+"tctx.fillRect(0,0,trendCanvas.width,trendCanvas.height);"
+
+"tctx.strokeStyle='#22c55e';"
+"tctx.beginPath();"
+
+"for(let i=0;i<history.length;i++){"
+"let x=i*10;"
+"let y=150-history[i];"
+"if(i===0){tctx.moveTo(x,y);}else{tctx.lineTo(x,y);}"
+"}"
+
+"tctx.stroke();"
+"}"
+
+/* FETCH BPM FROM ESP */
 "function fetchBPM(){"
-"fetch('/bpm').then(r=>r.text()).then(d=>{"
+"fetch('/bpm')"
+".then(r=>r.text())"
+".then(d=>{"
 "currentBPM=parseInt(d);"
 
 "document.getElementById('bpm').innerText=currentBPM;"
@@ -291,33 +346,52 @@ esp_err_t root_handler(httpd_req_t *req)
 "updateStatus(currentBPM);"
 "simulate(currentBPM);"
 
-/* store history */
+/* history */
 "history.push(currentBPM);"
 "if(history.length>60) history.shift();"
 
 "drawTrend();"
 
-/* risk classification */
+/* risk */
 "let risk='';"
-"if(currentBPM<60){risk='Low heart rate (Bradycardia risk)';}"
-"else if(currentBPM>100){risk='Elevated heart rate (Tachycardia risk)';}"
-"else{risk='Within normal physiological range';}"
+"if(currentBPM<60){"
+"risk='Low heart rate (Bradycardia risk)';"
+"}else if(currentBPM>100){"
+"risk='Elevated heart rate (Tachycardia risk)';"
+"}else{"
+"risk='Within normal physiological range';"
+"}"
 
+"if(document.getElementById('risk')){"
 "document.getElementById('risk').innerText=risk;"
-"document.getElementById('zone').innerText=risk.split(' ')[0];"
+"}"
 
-"});}"
- 
-"setInterval(()=>{fetchBPM();drawECG(currentBPM);},1000);"
+"if(document.getElementById('zone')){"
+"document.getElementById('zone').innerText=risk.split(' ')[0];"
+"}"
+
+"});"
+"}"
+
+/* START SYSTEM */
+"setInterval(function(){"
+"fetchBPM();"
+"drawECG(currentBPM);"
+"},1000);"
+
 "fetchBPM();"
 
 "</script>"
 
-"</body></html>";
+"</div>"  // CLOSE RIGHT PANEL
 
-    httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
-    return ESP_OK;
+"</div>" 
+"</body></html>"; // CLOSE LAYOUT
+
+httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
+return ESP_OK;
 }
+
 // BPM API
 esp_err_t bpm_handler(httpd_req_t *req)
 {
