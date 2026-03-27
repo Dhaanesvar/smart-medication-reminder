@@ -44,105 +44,133 @@ esp_err_t root_handler(httpd_req_t *req)
     const char *html =
     "<!DOCTYPE html><html><head>"
     "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-    "<title>Health Monitor</title>"
+    "<title>Medico</title>"
 
     "<style>"
-    "body{margin:0;background:#020617;color:#e2e8f0;font-family:sans-serif;}"
-    ".grid{display:grid;grid-template-columns:2fr 1fr;height:100vh;}"
+    "body{margin:0;font-family:Inter,Arial;background:#f4f6fb;color:#111;}"
 
-    ".left{padding:20px;}"
-    ".right{background:#020617;padding:20px;border-left:1px solid #1e293b;}"
+    ".layout{display:grid;grid-template-columns:80px 2fr 1fr;height:100vh;}"
 
-    ".card{background:#020617;border:1px solid #1e293b;padding:20px;border-radius:12px;margin-bottom:20px;}"
+    /* SIDEBAR */
+    ".sidebar{background:white;border-right:1px solid #eee;display:flex;flex-direction:column;align-items:center;padding:10px;gap:20px;}"
+    ".logo{font-weight:bold;color:#6c5ce7;}"
+    ".nav{width:40px;height:40px;border-radius:10px;background:#f0f2ff;display:flex;align-items:center;justify-content:center;}"
 
-    ".bpm{font-size:80px;font-weight:bold;}"
-    ".pulse{width:15px;height:15px;border-radius:50%;display:inline-block;margin-left:10px;}"
+    /* MAIN */
+    ".main{padding:20px;overflow:auto;}"
+    ".card{background:white;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 5px 20px rgba(0,0,0,0.05);}"
 
-    ".metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;}"
-    ".metric{background:#020617;border:1px solid #1e293b;padding:10px;border-radius:10px;}"
+    ".bpm{font-size:60px;font-weight:bold;color:#6c5ce7;}"
+    ".status{color:#666;margin-top:5px;}"
 
-    "canvas{width:100%;height:200px;background:black;border-radius:10px;}"
+    "canvas{width:100%;height:200px;background:#020617;border-radius:10px;}"
+
+    ".metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}"
+    ".metric{background:#f8f9ff;padding:10px;border-radius:10px;}"
+
+    /* RIGHT PANEL */
+    ".right{padding:20px;background:#fff;border-left:1px solid #eee;overflow:auto;}"
+
+    ".list-item{padding:10px;border-bottom:1px solid #eee;font-size:14px;}"
+
     "</style></head><body>"
 
-    "<div class='grid'>"
+    "<div class='layout'>"
 
-    "<div class='left'>"
+    /* SIDEBAR */
+    "<div class='sidebar'>"
+    "<div class='logo'>M</div>"
+    "<div class='nav'>🏠</div>"
+    "<div class='nav'>💓</div>"
+    "<div class='nav'>📊</div>"
+    "<div class='nav'>⚙️</div>"
+    "</div>"
+
+    /* MAIN */
+    "<div class='main'>"
 
     "<div class='card'>"
-    "<h2>Heart Monitor</h2>"
-    "<div class='bpm' id='bpm'>-- <span id='pulse' class='pulse'></span></div>"
-    "<div id='status'>Initializing...</div>"
+    "<h2>Overview Of Your Health</h2>"
+    "<div class='bpm' id='bpm'>--</div>"
+    "<div class='status' id='status'>Checking...</div>"
     "<div id='advice'></div>"
     "</div>"
 
     "<div class='card'>"
+    "<h3>Live ECG</h3>"
     "<canvas id='ecg'></canvas>"
     "</div>"
 
     "<div class='metrics'>"
-    "<div class='metric'>BP: <span id='bp'>--</span></div>"
-    "<div class='metric'>Oxygen: <span id='oxy'>--</span>%</div>"
-    "<div class='metric'>Stress: <span id='stress'>--</span>%</div>"
-    "<div class='metric'>Temp: <span id='temp'>--</span>°C</div>"
+    "<div class='metric'>BP: <b id='bp'>--</b></div>"
+    "<div class='metric'>Oxygen: <b id='oxy'>--%</b></div>"
+    "<div class='metric'>Stress: <b id='stress'>--%</b></div>"
+    "<div class='metric'>Temp: <b id='temp'>--°C</b></div>"
     "</div>"
 
     "</div>"
 
+    /* RIGHT PANEL */
     "<div class='right'>"
-    "<h2>Heart Insights</h2>"
+
+    "<div class='card'>"
+    "<h3>Medical Checkup History</h3>"
+    "<div class='list-item'>Running - 140 Cal</div>"
+    "<div class='list-item'>Cycling - 120 Cal</div>"
+    "<div class='list-item'>Swimming - 150 Cal</div>"
+    "<div class='list-item'>Yoga - 80 Cal</div>"
+    "</div>"
+
+    "<div class='card'>"
+    "<h3>Heart Info</h3>"
     "<p>Normal BPM: 60–100</p>"
-    "<p>Low BPM: Resting or fatigue</p>"
-    "<p>High BPM: Stress or activity</p>"
-    "<h3>Advice</h3>"
-    "<p>Maintain hydration, exercise, and calm breathing.</p>"
+    "<p>Low BPM: rest or fatigue</p>"
+    "<p>High BPM: stress or activity</p>"
+    "<p>Maintain hydration and calm breathing.</p>"
+    "</div>"
+
     "</div>"
 
     "</div>"
 
     "<script>"
+
+    "let color='#6c5ce7';"
     "const canvas=document.getElementById('ecg');"
     "const ctx=canvas.getContext('2d');"
     "canvas.width=800; canvas.height=200;"
 
-    "let x=0;"
+    "let offset=0;"
 
-    "function drawECG(bpm){"
-    "ctx.fillStyle='black';"
+    "function drawECG(){"
+    "ctx.fillStyle='#020617';"
     "ctx.fillRect(0,0,canvas.width,canvas.height);"
 
     "ctx.strokeStyle=color;"
     "ctx.lineWidth=2;"
     "ctx.beginPath();"
 
-    "for(let i=0;i<canvas.width;i++){"
-    "let y=100+Math.sin((i+x)/10)*5;"
+    "for(let x=0;x<canvas.width;x++){"
+    "let y=100+Math.sin((x+offset)/10)*5;"
 
-    "if(i%50===0){y=50;}"
-    "if(i%50===5){y=150;}"
+    "if(x%80===0) y=60;"
+    "if(x%80===5) y=140;"
 
-    "ctx.lineTo(i,y);"
+    "ctx.lineTo(x,y);"
     "}"
 
     "ctx.stroke();"
-    "x+=5;"
+    "offset+=5;"
     "}"
-
-    "let color='#22c55e';"
 
     "function updateStatus(bpm){"
-    "let status='',advice='';"
+    "let s='',a='';"
+    "if(bpm<60){s='LOW';color='#3b82f6';a='Increase activity';}"
+    "else if(bpm>100){s='HIGH';color='#ef4444';a='Relax and breathe';}"
+    "else{s='NORMAL';color='#22c55e';a='Stable condition';}"
 
-    "if(bpm<60){"
-    "status='LOW'; color='#3b82f6'; advice='Increase activity';"
-    "}else if(bpm>100){"
-    "status='HIGH'; color='#ef4444'; advice='Relax and breathe';"
-    "}else{"
-    "status='NORMAL'; color='#22c55e'; advice='Stable condition';"
-    "}"
-
-    "document.getElementById('status').innerText=status;"
-    "document.getElementById('advice').innerText=advice;"
-    "document.getElementById('pulse').style.background=color;"
+    "document.getElementById('status').innerText=s;"
+    "document.getElementById('advice').innerText=a;"
     "}"
 
     "function simulateExtras(bpm){"
@@ -155,13 +183,15 @@ esp_err_t root_handler(httpd_req_t *req)
     "function fetchBPM(){"
     "fetch('/bpm').then(r=>r.text()).then(d=>{"
     "let bpm=parseInt(d);"
-    "document.getElementById('bpm').innerHTML=bpm+' <span id=\"pulse\" class=\"pulse\"></span>';"
+    "document.getElementById('bpm').innerText=bpm;"
     "updateStatus(bpm);"
     "simulateExtras(bpm);"
     "});"
     "}"
 
     "setInterval(()=>{fetchBPM();drawECG();},1000);"
+    "fetchBPM();"
+
     "</script>"
 
     "</body></html>";
@@ -169,7 +199,6 @@ esp_err_t root_handler(httpd_req_t *req)
     httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
 }
-
 // BPM API
 esp_err_t bpm_handler(httpd_req_t *req)
 {
