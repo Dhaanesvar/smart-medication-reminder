@@ -44,42 +44,58 @@ esp_err_t root_handler(httpd_req_t *req)
     const char *html =
 "<!DOCTYPE html><html><head>"
 "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-"<title>Medico Pro</title>"
+"<title>Medico Pro X</title>"
 
 "<style>"
-"body{margin:0;font-family:Segoe UI,Arial;background:#f5f7fb;}"
+"body{margin:0;font-family:Segoe UI,Arial;background:#f4f7fb;color:#1a1a1a;}"
 
 ".layout{display:grid;grid-template-columns:90px 2fr 1fr;height:100vh;}"
 
 /* SIDEBAR */
-".sidebar{background:#fff;border-right:1px solid #eee;display:flex;flex-direction:column;align-items:center;padding:15px;gap:20px;}"
-".logo{font-weight:bold;color:#6c5ce7;}"
-".nav{width:55px;height:40px;background:#eef0ff;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;}"
+".sidebar{background:#fff;border-right:1px solid #e6e8ee;display:flex;flex-direction:column;align-items:center;padding:15px;gap:20px;}"
+".logo{font-weight:700;color:#6c5ce7;font-size:18px;}"
+".nav{width:60px;height:42px;background:#eef0ff;border-radius:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;}"
 
 /* MAIN */
 ".main{padding:20px;overflow:auto;}"
-".card{background:#fff;border-radius:15px;padding:20px;margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,0.05);}"
-".bpm{font-size:60px;font-weight:bold;color:#6c5ce7;}"
+".card{background:#fff;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 10px 25px rgba(0,0,0,0.05);}"
+".bpm{font-size:64px;font-weight:700;color:#6c5ce7;}"
+".status{font-size:16px;color:#555;}"
+".advice{font-size:14px;color:#777;margin-top:5px;}"
 
-".metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;}"
-".metric{background:#f5f6ff;padding:10px;border-radius:10px;}"
+".metrics{display:grid;grid-template-columns:1fr 1fr;gap:12px;}"
+".metric{background:#f7f8ff;padding:12px;border-radius:12px;}"
 
-"canvas{width:100%;height:200px;background:#020617;border-radius:10px;}"
+"canvas{width:100%;height:220px;background:#020617;border-radius:12px;}"
 
 /* RIGHT PANEL */
-".right{padding:20px;background:#fff;border-left:1px solid #eee;overflow:auto;}"
+".right{padding:20px;background:#fff;border-left:1px solid #e6e8ee;overflow:auto;}"
 "table{width:100%;border-collapse:collapse;}"
 "th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px;text-align:left;}"
 
+".info{font-size:14px;line-height:1.6;color:#555;}"
 "</style></head><body>"
 
 "<div class='layout'>"
 
 /* SIDEBAR */
 "<div class='sidebar'>"
+
 "<div class='logo'>MED</div>"
+
+"<div style='font-size:12px;color:#666;text-align:center;'>"
+"Patient ID<br><b>HM-1024</b><br><br>"
+"Age<br><b>29</b><br><br>"
+"Status<br><b id='zone'>Normal</b>"
+"</div>"
+
 "<div class='nav' onclick=\"showView('pulse')\">Pulse</div>"
 "<div class='nav' onclick=\"showView('stats')\">Stats</div>"
+
+"<div style='margin-top:auto;font-size:11px;color:#999;text-align:center;'>"
+"Live Monitoring Active"
+"</div>"
+
 "</div>"
 
 /* MAIN */
@@ -89,39 +105,51 @@ esp_err_t root_handler(httpd_req_t *req)
 "<div id='pulseView'>"
 
 "<div class='card'>"
-"<h3>Overview</h3>"
+"<h3>Patient Heart Overview</h3>"
 "<div class='bpm' id='bpm'>--</div>"
-"<div id='status'>Analyzing...</div>"
-"<div id='advice'></div>"
+"<div class='status' id='status'>Analyzing...</div>"
+"<div class='advice' id='advice'></div>"
 "</div>"
 
 "<div class='card'>"
-"<h3>ECG Monitor</h3>"
+"<h3>Real-Time ECG Monitor</h3>"
 "<canvas id='ecg'></canvas>"
 "</div>"
 
 "<div class='metrics'>"
-"<div class='metric'>BP: <b id='bp'>--</b></div>"
-"<div class='metric'>Oxygen: <b id='oxy'>--%</b></div>"
-"<div class='metric'>Stress: <b id='stress'>--%</b></div>"
-"<div class='metric'>Temp: <b id='temp'>--</b></div>"
+"<div class='metric'>Blood Pressure<br><b id='bp'>--</b></div>"
+"<div class='metric'>Oxygen Saturation<br><b id='oxy'>--%</b></div>"
+"<div class='metric'>Stress Index<br><b id='stress'>--</b></div>"
+"<div class='metric'>Body Temperature<br><b id='temp'>--</b></div>"
 "</div>"
 
 "</div>"
 
 /* STATS VIEW */
 "<div id='statsView' style='display:none;'>"
+
 "<div class='card'>"
-"<h3>Cardiac Statistics</h3>"
+"<h3>Advanced Cardiac Metrics</h3>"
 
 "<div class='metrics'>"
 "<div class='metric'>Resting BPM<br><b>72</b></div>"
-"<div class='metric'>HRV<br><b id='hrv'>--</b></div>"
+"<div class='metric'>HRV<br><b id='hrv'>-- ms</b></div>"
 "<div class='metric'>MAP<br><b id='map'>--</b></div>"
-"<div class='metric'>Cardiac Output<br><b id='co'>--</b></div>"
+"<div class='metric'>Cardiac Output<br><b id='co'>-- L/min</b></div>"
 "</div>"
 
 "</div>"
+
+/* NEW: TREND GRAPH */
+"<div class='card'>"
+"<h3>Heart Rate Trend</h3>"
+"<canvas id='trend'></canvas>"
+"</div>"
+
+/* NEW: RISK PANEL */
+"<div class='card'>"
+"<h3>Risk Classification</h3>"
+"<div id='risk' style='font-size:14px;color:#555;'>Analyzing...</div>"
 "</div>"
 
 "</div>"
@@ -129,10 +157,11 @@ esp_err_t root_handler(httpd_req_t *req)
 /* RIGHT PANEL */
 "<div class='right'>"
 
+/* HISTORY TABLE */
 "<div class='card'>"
-"<h3>Medical History</h3>"
+"<h3>Medical Activity Log</h3>"
 "<table>"
-"<tr><th>Activity</th><th>Date</th><th>Cal</th></tr>"
+"<tr><th>Activity</th><th>Date</th><th>Calories</th></tr>"
 "<tr><td>Running</td><td>14 Apr</td><td>140</td></tr>"
 "<tr><td>Cycling</td><td>12 Apr</td><td>120</td></tr>"
 "<tr><td>Swimming</td><td>10 Apr</td><td>150</td></tr>"
@@ -140,11 +169,21 @@ esp_err_t root_handler(httpd_req_t *req)
 "</table>"
 "</div>"
 
+/* CLINICAL INTERPRETATION */
 "<div class='card'>"
-"<h3>Heart Info</h3>"
-"<p>Normal: 60–100 BPM</p>"
-"<p>Low: fatigue</p>"
-"<p>High: stress</p>"
+"<h3>Clinical Interpretation</h3>"
+"<div class='info' id='interpret'>Waiting for data...</div>"
+"</div>"
+
+/* HEART EDUCATION */
+"<div class='card'>"
+"<h3>Cardiovascular Insight</h3>"
+"<div class='info'>"
+"The heart pumps blood throughout the body delivering oxygen and nutrients. "
+"Normal resting heart rate ranges from 60 to 100 BPM. Sustained high rates may indicate stress, "
+"while low rates can reflect rest or underlying conditions. Maintaining cardiovascular health "
+"requires balanced activity, hydration, and controlled stress levels."
+"</div>"
 "</div>"
 
 "</div>"
@@ -154,73 +193,84 @@ esp_err_t root_handler(httpd_req_t *req)
 /* SCRIPT */
 "<script>"
 
-"let currentBPM = 75;"
+"let currentBPM=75;"
 "let canvas=document.getElementById('ecg');"
 "let ctx=canvas.getContext('2d');"
-"canvas.width=800; canvas.height=200;"
+"canvas.width=800;canvas.height=220;"
 "let offset=0;"
 "let color='#6c5ce7';"
 
+"let trendCanvas=document.createElement('canvas');"
+"trendCanvas=document.getElementById('trend');"
+"let tctx=trendCanvas.getContext('2d');"
+"trendCanvas.width=800; trendCanvas.height=200;"
+
+"let history=[];"
+
+"function drawTrend(){"
+"tctx.fillStyle='#020617';"
+"tctx.fillRect(0,0,trendCanvas.width,trendCanvas.height);"
+
+"tctx.strokeStyle='#22c55e';"
+"tctx.beginPath();"
+
+"for(let i=0;i<history.length;i++){"
+"let x=i*10;"
+"let y=150-history[i];"
+"tctx.lineTo(x,y);"
+"}"
+
+"tctx.stroke();"
+"}"
+
 /* VIEW SWITCH */
-"function showView(view){"
+"function showView(v){"
 "document.getElementById('pulseView').style.display='none';"
 "document.getElementById('statsView').style.display='none';"
-"if(view==='pulse'){document.getElementById('pulseView').style.display='block';}"
+"if(v==='pulse'){document.getElementById('pulseView').style.display='block';}"
 "else{document.getElementById('statsView').style.display='block';}"
 "}"
 
-/* ECG PQRST */
+/* ECG */
 "function drawECG(bpm){"
-"ctx.fillStyle='#020617';"
-"ctx.fillRect(0,0,canvas.width,canvas.height);"
+"ctx.fillStyle='#020617';ctx.fillRect(0,0,canvas.width,canvas.height);"
+"ctx.strokeStyle=color;ctx.beginPath();"
 
-"ctx.strokeStyle=color;"
-"ctx.lineWidth=2;"
-"ctx.beginPath();"
-
-"let baseline=100;"
-"let cycle = 60000 / bpm;"
-"let scale = canvas.width / 2000;"
+"let base=110;"
+"let cycle=60000/bpm;"
+"let scale=canvas.width/2000;"
 
 "for(let x=0;x<canvas.width;x++){"
-
 "let t=(x+offset)/scale;"
 "let p=t%cycle;"
-"let y=baseline;"
+"let y=base;"
 
-/* P */
 "if(p>80&&p<140){y-=5*Math.sin((p-80)/60*Math.PI);}"
-
-/* Q */
 "if(p>180&&p<200){y+=8;}"
-
-/* R */
 "if(p>200&&p<220){y-=35;}"
-
-/* S */
 "if(p>220&&p<240){y+=15;}"
-
-/* T */
 "if(p>300&&p<380){y-=10*Math.sin((p-300)/80*Math.PI);}"
 
-"ctx.lineTo(x,y);"
-"}"
-
-"ctx.stroke();"
-"offset+=5;"
-"}"
-
+"ctx.lineTo(x,y);}"
+"ctx.stroke();offset+=5;}"
+ 
 /* STATUS */
 "function updateStatus(bpm){"
-"if(bpm<60){color='#3b82f6';document.getElementById('status').innerText='LOW';document.getElementById('advice').innerText='Increase activity';}"
-"else if(bpm>100){color='#ef4444';document.getElementById('status').innerText='HIGH';document.getElementById('advice').innerText='Relax';}"
-"else{color='#22c55e';document.getElementById('status').innerText='NORMAL';document.getElementById('advice').innerText='Stable';}"
+"let txt='';"
+"if(bpm<60){color='#3b82f6';txt='Bradycardia detected. Recommend light activity.';}"
+"else if(bpm>100){color='#ef4444';txt='Elevated heart rate. Suggest rest and hydration.';}"
+"else{color='#22c55e';txt='Heart rate within normal resting range.';}"
+
+"document.getElementById('status').innerText=txt;"
+"document.getElementById('advice').innerText='Continuous monitoring active.';"
+"document.getElementById('interpret').innerText=txt;"
 "}"
 
-/* MEDICAL CALC */
+/* CALC */
 "function simulate(bpm){"
 "let sys=90+(bpm*0.5);"
 "let dia=60+(bpm*0.3);"
+
 "document.getElementById('bp').innerText=Math.round(sys)+'/'+Math.round(dia);"
 "document.getElementById('oxy').innerText=(97+Math.sin(Date.now()/5000)).toFixed(1);"
 "document.getElementById('stress').innerText=Math.max(0,bpm-60);"
@@ -235,12 +285,29 @@ esp_err_t root_handler(httpd_req_t *req)
 "function fetchBPM(){"
 "fetch('/bpm').then(r=>r.text()).then(d=>{"
 "currentBPM=parseInt(d);"
+
 "document.getElementById('bpm').innerText=currentBPM;"
+
 "updateStatus(currentBPM);"
 "simulate(currentBPM);"
-"});"
-"}"
 
+/* store history */
+"history.push(currentBPM);"
+"if(history.length>60) history.shift();"
+
+"drawTrend();"
+
+/* risk classification */
+"let risk='';"
+"if(currentBPM<60){risk='Low heart rate (Bradycardia risk)';}"
+"else if(currentBPM>100){risk='Elevated heart rate (Tachycardia risk)';}"
+"else{risk='Within normal physiological range';}"
+
+"document.getElementById('risk').innerText=risk;"
+"document.getElementById('zone').innerText=risk.split(' ')[0];"
+
+"});}"
+ 
 "setInterval(()=>{fetchBPM();drawECG(currentBPM);},1000);"
 "fetchBPM();"
 
