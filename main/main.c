@@ -42,159 +42,211 @@ esp_err_t root_handler(httpd_req_t *req)
     httpd_resp_set_type(req, "text/html");
 
     const char *html =
-    "<!DOCTYPE html><html><head>"
-    "<meta name='viewport' content='width=device-width, initial-scale=1'>"
-    "<title>Medico</title>"
+"<!DOCTYPE html><html><head>"
+"<meta name='viewport' content='width=device-width, initial-scale=1'>"
+"<title>Medico Pro</title>"
 
-    "<style>"
-    "body{margin:0;font-family:Inter,Arial;background:#f4f6fb;color:#111;}"
+"<style>"
+"body{margin:0;font-family:Segoe UI,Arial;background:#f5f7fb;}"
 
-    ".layout{display:grid;grid-template-columns:80px 2fr 1fr;height:100vh;}"
+".layout{display:grid;grid-template-columns:90px 2fr 1fr;height:100vh;}"
 
-    /* SIDEBAR */
-    ".sidebar{background:white;border-right:1px solid #eee;display:flex;flex-direction:column;align-items:center;padding:10px;gap:20px;}"
-    ".logo{font-weight:bold;color:#6c5ce7;}"
-    ".nav{width:40px;height:40px;border-radius:10px;background:#f0f2ff;display:flex;align-items:center;justify-content:center;}"
+/* SIDEBAR */
+".sidebar{background:#fff;border-right:1px solid #eee;display:flex;flex-direction:column;align-items:center;padding:15px;gap:20px;}"
+".logo{font-weight:bold;color:#6c5ce7;}"
+".nav{width:55px;height:40px;background:#eef0ff;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;}"
 
-    /* MAIN */
-    ".main{padding:20px;overflow:auto;}"
-    ".card{background:white;border-radius:16px;padding:20px;margin-bottom:20px;box-shadow:0 5px 20px rgba(0,0,0,0.05);}"
+/* MAIN */
+".main{padding:20px;overflow:auto;}"
+".card{background:#fff;border-radius:15px;padding:20px;margin-bottom:20px;box-shadow:0 5px 15px rgba(0,0,0,0.05);}"
+".bpm{font-size:60px;font-weight:bold;color:#6c5ce7;}"
 
-    ".bpm{font-size:60px;font-weight:bold;color:#6c5ce7;}"
-    ".status{color:#666;margin-top:5px;}"
+".metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;}"
+".metric{background:#f5f6ff;padding:10px;border-radius:10px;}"
 
-    "canvas{width:100%;height:200px;background:#020617;border-radius:10px;}"
+"canvas{width:100%;height:200px;background:#020617;border-radius:10px;}"
 
-    ".metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;}"
-    ".metric{background:#f8f9ff;padding:10px;border-radius:10px;}"
+/* RIGHT PANEL */
+".right{padding:20px;background:#fff;border-left:1px solid #eee;overflow:auto;}"
+"table{width:100%;border-collapse:collapse;}"
+"th,td{padding:8px;border-bottom:1px solid #eee;font-size:14px;text-align:left;}"
 
-    /* RIGHT PANEL */
-    ".right{padding:20px;background:#fff;border-left:1px solid #eee;overflow:auto;}"
+"</style></head><body>"
 
-    ".list-item{padding:10px;border-bottom:1px solid #eee;font-size:14px;}"
+"<div class='layout'>"
 
-    "</style></head><body>"
+/* SIDEBAR */
+"<div class='sidebar'>"
+"<div class='logo'>MED</div>"
+"<div class='nav' onclick=\"showView('pulse')\">Pulse</div>"
+"<div class='nav' onclick=\"showView('stats')\">Stats</div>"
+"</div>"
 
-    "<div class='layout'>"
+/* MAIN */
+"<div class='main'>"
 
-    /* SIDEBAR */
-    "<div class='sidebar'>"
-    "<div class='logo'>M</div>"
-    "<div class='nav'>🏠</div>"
-    "<div class='nav'>💓</div>"
-    "<div class='nav'>📊</div>"
-    "<div class='nav'>⚙️</div>"
-    "</div>"
+/* PULSE VIEW */
+"<div id='pulseView'>"
 
-    /* MAIN */
-    "<div class='main'>"
+"<div class='card'>"
+"<h3>Overview</h3>"
+"<div class='bpm' id='bpm'>--</div>"
+"<div id='status'>Analyzing...</div>"
+"<div id='advice'></div>"
+"</div>"
 
-    "<div class='card'>"
-    "<h2>Overview Of Your Health</h2>"
-    "<div class='bpm' id='bpm'>--</div>"
-    "<div class='status' id='status'>Checking...</div>"
-    "<div id='advice'></div>"
-    "</div>"
+"<div class='card'>"
+"<h3>ECG Monitor</h3>"
+"<canvas id='ecg'></canvas>"
+"</div>"
 
-    "<div class='card'>"
-    "<h3>Live ECG</h3>"
-    "<canvas id='ecg'></canvas>"
-    "</div>"
+"<div class='metrics'>"
+"<div class='metric'>BP: <b id='bp'>--</b></div>"
+"<div class='metric'>Oxygen: <b id='oxy'>--%</b></div>"
+"<div class='metric'>Stress: <b id='stress'>--%</b></div>"
+"<div class='metric'>Temp: <b id='temp'>--</b></div>"
+"</div>"
 
-    "<div class='metrics'>"
-    "<div class='metric'>BP: <b id='bp'>--</b></div>"
-    "<div class='metric'>Oxygen: <b id='oxy'>--%</b></div>"
-    "<div class='metric'>Stress: <b id='stress'>--%</b></div>"
-    "<div class='metric'>Temp: <b id='temp'>--°C</b></div>"
-    "</div>"
+"</div>"
 
-    "</div>"
+/* STATS VIEW */
+"<div id='statsView' style='display:none;'>"
+"<div class='card'>"
+"<h3>Cardiac Statistics</h3>"
 
-    /* RIGHT PANEL */
-    "<div class='right'>"
+"<div class='metrics'>"
+"<div class='metric'>Resting BPM<br><b>72</b></div>"
+"<div class='metric'>HRV<br><b id='hrv'>--</b></div>"
+"<div class='metric'>MAP<br><b id='map'>--</b></div>"
+"<div class='metric'>Cardiac Output<br><b id='co'>--</b></div>"
+"</div>"
 
-    "<div class='card'>"
-    "<h3>Medical Checkup History</h3>"
-    "<div class='list-item'>Running - 140 Cal</div>"
-    "<div class='list-item'>Cycling - 120 Cal</div>"
-    "<div class='list-item'>Swimming - 150 Cal</div>"
-    "<div class='list-item'>Yoga - 80 Cal</div>"
-    "</div>"
+"</div>"
+"</div>"
 
-    "<div class='card'>"
-    "<h3>Heart Info</h3>"
-    "<p>Normal BPM: 60–100</p>"
-    "<p>Low BPM: rest or fatigue</p>"
-    "<p>High BPM: stress or activity</p>"
-    "<p>Maintain hydration and calm breathing.</p>"
-    "</div>"
+"</div>"
 
-    "</div>"
+/* RIGHT PANEL */
+"<div class='right'>"
 
-    "</div>"
+"<div class='card'>"
+"<h3>Medical History</h3>"
+"<table>"
+"<tr><th>Activity</th><th>Date</th><th>Cal</th></tr>"
+"<tr><td>Running</td><td>14 Apr</td><td>140</td></tr>"
+"<tr><td>Cycling</td><td>12 Apr</td><td>120</td></tr>"
+"<tr><td>Swimming</td><td>10 Apr</td><td>150</td></tr>"
+"<tr><td>Yoga</td><td>9 Apr</td><td>80</td></tr>"
+"</table>"
+"</div>"
 
-    "<script>"
+"<div class='card'>"
+"<h3>Heart Info</h3>"
+"<p>Normal: 60–100 BPM</p>"
+"<p>Low: fatigue</p>"
+"<p>High: stress</p>"
+"</div>"
 
-    "let color='#6c5ce7';"
-    "const canvas=document.getElementById('ecg');"
-    "const ctx=canvas.getContext('2d');"
-    "canvas.width=800; canvas.height=200;"
+"</div>"
 
-    "let offset=0;"
+"</div>"
 
-    "function drawECG(){"
-    "ctx.fillStyle='#020617';"
-    "ctx.fillRect(0,0,canvas.width,canvas.height);"
+/* SCRIPT */
+"<script>"
 
-    "ctx.strokeStyle=color;"
-    "ctx.lineWidth=2;"
-    "ctx.beginPath();"
+"let currentBPM = 75;"
+"let canvas=document.getElementById('ecg');"
+"let ctx=canvas.getContext('2d');"
+"canvas.width=800; canvas.height=200;"
+"let offset=0;"
+"let color='#6c5ce7';"
 
-    "for(let x=0;x<canvas.width;x++){"
-    "let y=100+Math.sin((x+offset)/10)*5;"
+/* VIEW SWITCH */
+"function showView(view){"
+"document.getElementById('pulseView').style.display='none';"
+"document.getElementById('statsView').style.display='none';"
+"if(view==='pulse'){document.getElementById('pulseView').style.display='block';}"
+"else{document.getElementById('statsView').style.display='block';}"
+"}"
 
-    "if(x%80===0) y=60;"
-    "if(x%80===5) y=140;"
+/* ECG PQRST */
+"function drawECG(bpm){"
+"ctx.fillStyle='#020617';"
+"ctx.fillRect(0,0,canvas.width,canvas.height);"
 
-    "ctx.lineTo(x,y);"
-    "}"
+"ctx.strokeStyle=color;"
+"ctx.lineWidth=2;"
+"ctx.beginPath();"
 
-    "ctx.stroke();"
-    "offset+=5;"
-    "}"
+"let baseline=100;"
+"let cycle = 60000 / bpm;"
+"let scale = canvas.width / 2000;"
 
-    "function updateStatus(bpm){"
-    "let s='',a='';"
-    "if(bpm<60){s='LOW';color='#3b82f6';a='Increase activity';}"
-    "else if(bpm>100){s='HIGH';color='#ef4444';a='Relax and breathe';}"
-    "else{s='NORMAL';color='#22c55e';a='Stable condition';}"
+"for(let x=0;x<canvas.width;x++){"
 
-    "document.getElementById('status').innerText=s;"
-    "document.getElementById('advice').innerText=a;"
-    "}"
+"let t=(x+offset)/scale;"
+"let p=t%cycle;"
+"let y=baseline;"
 
-    "function simulateExtras(bpm){"
-    "document.getElementById('bp').innerText=(100+bpm/2)+'/'+(60+bpm/3);"
-    "document.getElementById('oxy').innerText=(95+Math.random()*5).toFixed(0);"
-    "document.getElementById('stress').innerText=(bpm-50);"
-    "document.getElementById('temp').innerText=(36+Math.random()).toFixed(1);"
-    "}"
+/* P */
+"if(p>80&&p<140){y-=5*Math.sin((p-80)/60*Math.PI);}"
 
-    "function fetchBPM(){"
-    "fetch('/bpm').then(r=>r.text()).then(d=>{"
-    "let bpm=parseInt(d);"
-    "document.getElementById('bpm').innerText=bpm;"
-    "updateStatus(bpm);"
-    "simulateExtras(bpm);"
-    "});"
-    "}"
+/* Q */
+"if(p>180&&p<200){y+=8;}"
 
-    "setInterval(()=>{fetchBPM();drawECG();},1000);"
-    "fetchBPM();"
+/* R */
+"if(p>200&&p<220){y-=35;}"
 
-    "</script>"
+/* S */
+"if(p>220&&p<240){y+=15;}"
 
-    "</body></html>";
+/* T */
+"if(p>300&&p<380){y-=10*Math.sin((p-300)/80*Math.PI);}"
+
+"ctx.lineTo(x,y);"
+"}"
+
+"ctx.stroke();"
+"offset+=5;"
+"}"
+
+/* STATUS */
+"function updateStatus(bpm){"
+"if(bpm<60){color='#3b82f6';document.getElementById('status').innerText='LOW';document.getElementById('advice').innerText='Increase activity';}"
+"else if(bpm>100){color='#ef4444';document.getElementById('status').innerText='HIGH';document.getElementById('advice').innerText='Relax';}"
+"else{color='#22c55e';document.getElementById('status').innerText='NORMAL';document.getElementById('advice').innerText='Stable';}"
+"}"
+
+/* MEDICAL CALC */
+"function simulate(bpm){"
+"let sys=90+(bpm*0.5);"
+"let dia=60+(bpm*0.3);"
+"document.getElementById('bp').innerText=Math.round(sys)+'/'+Math.round(dia);"
+"document.getElementById('oxy').innerText=(97+Math.sin(Date.now()/5000)).toFixed(1);"
+"document.getElementById('stress').innerText=Math.max(0,bpm-60);"
+"document.getElementById('temp').innerText=(36.5+Math.sin(Date.now()/8000)*0.2).toFixed(1);"
+
+"document.getElementById('hrv').innerText=(120-bpm);"
+"document.getElementById('map').innerText=Math.round(dia+(sys-dia)/3);"
+"document.getElementById('co').innerText=(bpm*0.07).toFixed(2);"
+"}"
+
+/* FETCH */
+"function fetchBPM(){"
+"fetch('/bpm').then(r=>r.text()).then(d=>{"
+"currentBPM=parseInt(d);"
+"document.getElementById('bpm').innerText=currentBPM;"
+"updateStatus(currentBPM);"
+"simulate(currentBPM);"
+"});"
+"}"
+
+"setInterval(()=>{fetchBPM();drawECG(currentBPM);},1000);"
+"fetchBPM();"
+
+"</script>"
+
+"</body></html>";
 
     httpd_resp_send(req, html, HTTPD_RESP_USE_STRLEN);
     return ESP_OK;
